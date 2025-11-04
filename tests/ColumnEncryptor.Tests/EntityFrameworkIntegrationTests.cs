@@ -24,7 +24,6 @@ public class EntityFrameworkIntegrationTests
     private string _connectionString = string.Empty;
     private string _vaultUrl = string.Empty;
     private const string SqlServerPassword = "Test123!@#";
-    private const string DatabaseName = "ColumnEncryptorTest";
     private const string VaultImage = "hashicorp/vault:latest";
     private const int VaultPort = 8200;
     private const string VaultToken = "test-root-token";
@@ -78,7 +77,7 @@ public class EntityFrameworkIntegrationTests
             options.UseSqlServer(_connectionString));
 
         // Add column encryption with HashiCorp Vault
-        services.AddColumnEncryption(new EncryptionOptions
+        services.AddColumnEncryptor(new EncryptionOptions
         {
             KeyProvider = KeyProviderType.HashiCorpVault,
             Vault = new VaultOptions
@@ -188,7 +187,7 @@ public class EntityFrameworkIntegrationTests
             Email = "john.doe@example.com",
             CreditCardNumber = "1234-5678-9012-3456",
             SocialSecurityNumber = "123-45-6789",
-            DateOfBirth = new DateTime(1990, 5, 15),
+            DateOfBirth = new DateTime(1990, 5, 15, 0, 0, 0, DateTimeKind.Utc),
             Salary = 75000.50m,
             IsActive = true,
             Notes = "This is a confidential note about the user."
@@ -417,10 +416,10 @@ public class EntityFrameworkIntegrationTests
     }
 
     // Helper method to get raw (encrypted) values from the database
-    private async Task<RawUserData?> GetRawDatabaseValues(TestDbContext dbContext, int userId)
+    private static async Task<RawUserData?> GetRawDatabaseValues(TestDbContext dbContext, int userId)
     {
         var sql = @"
-            SELECT Id, Username, Email, CreditCardNumber, SocialSecurityNumber, Notes
+            SELECT Username, Email, CreditCardNumber, SocialSecurityNumber, Notes
             FROM Users 
             WHERE Id = {0}";
 
@@ -431,14 +430,16 @@ public class EntityFrameworkIntegrationTests
     }
 
     // Helper class to capture raw database values (encrypted)
-    private class RawUserData
+    // These properties are used by Entity Framework's SqlQueryRaw method for mapping
+    private sealed class RawUserData
     {
-        public int Id { get; set; }
-        public string Username { get; set; } = string.Empty;
-        public string Email { get; set; } = string.Empty;
-        public string? CreditCardNumber { get; set; }
-        public string SocialSecurityNumber { get; set; } = string.Empty;
-        public string? Notes { get; set; }
+        public string Username { get; init; } = string.Empty;
+        public string Email { get; init; } = string.Empty;
+        // Initialized to satisfy SonarQube warnings - actual values set by EF mapping
+        public string? CreditCardNumber { get; init; } = null;
+        public string SocialSecurityNumber { get; init; } = string.Empty;
+        // Initialized to satisfy SonarQube warnings - actual values set by EF mapping  
+        public string? Notes { get; init; } = null;
     }
 }
 

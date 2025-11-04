@@ -17,7 +17,7 @@ public static class ColumnEncryptorConfiguration
     /// <param name="services">Service collection</param>
     /// <param name="options">Encryption configuration options</param>
     /// <returns>Service collection for chaining</returns>
-    public static IServiceCollection AddColumnEncryption(
+    public static IServiceCollection AddColumnEncryptor(
         this IServiceCollection services, 
         EncryptionOptions options)
     {
@@ -58,7 +58,7 @@ public static class ColumnEncryptorConfiguration
     {
         var options = new EncryptionOptions();
         configure(options);
-        return services.AddColumnEncryption(options);
+        return services.AddColumnEncryptor(options);
     }
 
     /// <summary>

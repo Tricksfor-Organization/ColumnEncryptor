@@ -51,7 +51,7 @@ public class HashiCorpTests
         var services = new ServiceCollection();
         services.AddLogging(builder => builder.SetMinimumLevel(LogLevel.Debug));
         
-        services.AddColumnEncryption(new EncryptionOptions
+        services.AddColumnEncryptor(new EncryptionOptions
         {
             KeyProvider = KeyProviderType.HashiCorpVault,
             Vault = new VaultOptions
