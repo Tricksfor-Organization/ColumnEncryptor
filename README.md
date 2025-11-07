@@ -154,6 +154,11 @@ services.AddColumnEncryption(configuration.GetSection("ColumnEncryption"));
 - [Security Best Practices](#security-considerations)
 - [Migration Guide](#migration-from-local-to-vault)
 
+## Known Issues
+
+### Release 9.0.0 Packaging Issue
+If you encounter issues with the 9.0.0 release, please see [FIX_RELEASE_ISSUE.md](FIX_RELEASE_ISSUE.md) for details and resolution steps. This issue has been identified and documented with a fix script available.
+
 ## License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
