@@ -2,13 +2,20 @@
 
 # Script to fix the 9.0.0 release tag
 # This script moves the 9.0.0 tag to the correct commit that includes README.md
+# 
+# USAGE: 
+#   Make sure the script is executable: chmod +x fix-release-tag.sh
+#   Then run: ./fix-release-tag.sh
 
 set -e
 
 echo "=== Fixing 9.0.0 Release Tag ==="
 echo ""
 
-# The commit that includes the README.md file
+# The commit that includes the README.md file in src/ColumnEncryptor/
+# This commit is "Refactor README and project files for clarity and consistency"
+# which added README.md files to src/ColumnEncryptor/ and tests/ColumnEncryptor.Tests/
+# Verification: git ls-tree c1676b2 src/ColumnEncryptor/ | grep README.md
 CORRECT_COMMIT="c1676b21d82b642619d6c7998303dd67554bd64e"
 TAG_NAME="9.0.0"
 
@@ -17,7 +24,11 @@ git show-ref --tags | grep "$TAG_NAME" || echo "Tag not found locally"
 echo ""
 
 echo "Deleting local tag '$TAG_NAME' if it exists..."
-git tag -d "$TAG_NAME" 2>/dev/null || echo "Tag doesn't exist locally"
+if git tag -d "$TAG_NAME" 2>/dev/null; then
+    echo "  Local tag deleted successfully"
+else
+    echo "  Tag doesn't exist locally (this is okay)"
+fi
 echo ""
 
 echo "Creating new tag '$TAG_NAME' pointing to commit $CORRECT_COMMIT..."

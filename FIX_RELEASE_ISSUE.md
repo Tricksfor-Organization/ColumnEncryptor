@@ -33,6 +33,19 @@ Move the git tag `9.0.0` to point to commit `c1676b2` which includes the require
 Run these commands locally:
 
 ```bash
+# Make the script executable (if not already)
+chmod +x fix-release-tag.sh
+
+# Run the fix script
+./fix-release-tag.sh
+
+# Push the updated tag to remote (requires force push)
+git push --force origin 9.0.0
+```
+
+Or manually with git commands:
+
+```bash
 # Delete the local tag
 git tag -d 9.0.0
 
