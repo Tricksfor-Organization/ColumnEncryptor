@@ -19,12 +19,23 @@ echo ""
 CORRECT_COMMIT="c1676b21d82b642619d6c7998303dd67554bd64e"
 TAG_NAME="9.0.0"
 
+echo "Validating commit $CORRECT_COMMIT exists..."
+if ! git rev-parse --verify "$CORRECT_COMMIT" >/dev/null 2>&1; then
+    echo "✗ ERROR: Commit $CORRECT_COMMIT not found in repository"
+    echo "  Please fetch the latest commits or check the commit hash"
+    exit 1
+fi
+echo "✓ Commit validated"
+echo ""
+
 echo "Current tag information:"
 git show-ref --tags | grep "$TAG_NAME" || echo "Tag not found locally"
 echo ""
 
 echo "Deleting local tag '$TAG_NAME' if it exists..."
-if git tag -d "$TAG_NAME" 2>/dev/null; then
+# Check if tag exists before trying to delete it
+if git tag -l | grep -q "^$TAG_NAME$"; then
+    git tag -d "$TAG_NAME"
     echo "  Local tag deleted successfully"
 else
     echo "  Tag doesn't exist locally (this is okay)"
