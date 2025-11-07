@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 # Script to fix the 9.0.0 release tag
 # This script moves the 9.0.0 tag to the correct commit that includes README.md
@@ -29,12 +29,12 @@ echo "✓ Commit validated"
 echo ""
 
 echo "Current tag information:"
-git show-ref --tags | grep "$TAG_NAME" || echo "Tag not found locally"
+git show-ref --tags | grep "refs/tags/$TAG_NAME$" || echo "Tag not found locally"
 echo ""
 
 echo "Deleting local tag '$TAG_NAME' if it exists..."
 # Check if tag exists before trying to delete it
-if git tag -l | grep -q "^$TAG_NAME$"; then
+if git tag -l "$TAG_NAME" | grep -q "^$TAG_NAME$"; then
     git tag -d "$TAG_NAME"
     echo "  Local tag deleted successfully"
 else
