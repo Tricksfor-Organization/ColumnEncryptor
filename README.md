@@ -1,24 +1,22 @@
- and replace it wi# ColumnEncryptor
+ and replace it wi# Tricksfor.ColumnEncryptor
 
-A robust .NET library for encrypting and decrypting Entity Framework Core database columns using AES-GCM encryption with advanced key management capabilities.
+Transparent column-level encryption for Entity Framework Core with enterprise key management.
 
 ## Features
 
 - **🔒 Strong Encryption**: AES-GCM 256-bit encryption with per-row encryption
-- **🔑 Key Management**: Support for both HashiCorp Vault and Azure Key Vault key storage
-- **🔄 Key Rotation**: Seamless key versioning and rotation without data re-encryption
-- **🎯 Attribute-Based**: Simple `[Encrypted]` attribute to mark properties for encryption
-- **⚡ Performance**: Built-in key caching and optimized operations
-- **🔧 EF Core Integration**: Automatic encryption/decryption with Entity Framework Core
-- **🛡️ Security**: Industry-standard security practices with configurable authentication methods
-- **📈 Production Ready**: Comprehensive logging, error handling, and monitoring support
+- **🔑 Key Management**: Azure Key Vault and HashiCorp Vault support
+- **🔄 Key Rotation**: Seamless key versioning without data re-encryption
+- **🎯 Attribute-Based**: Simple `[Encrypted]` attribute
+- **⚡ Performance**: Built-in key caching
+- **️ Production Ready**: Comprehensive logging and error handling
 
 ## Quick Start
 
 ### 1. Installation
 
 ```bash
-dotnet add package ColumnEncryptor
+dotnet add package Tricksfor.ColumnEncryptor
 ```
 
 ### 2. Configure Services
