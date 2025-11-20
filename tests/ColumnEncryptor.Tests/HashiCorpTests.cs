@@ -4,7 +4,7 @@ using DotNet.Testcontainers.Builders;
 using DotNet.Testcontainers.Containers;
 using ColumnEncryptor.Common;
 using ColumnEncryptor.Interfaces;
-using FluentAssertions;
+using Shouldly;
 using NUnit.Framework;
 
 namespace ColumnEncryptor.Tests;
@@ -122,8 +122,8 @@ public class HashiCorpTests
         var keyProvider = _scope?.ServiceProvider.GetRequiredService<IKeyProvider>();
         
         // Assert
-        keyProvider.Should().NotBeNull();
-        keyProvider.Should().BeOfType<ColumnEncryptor.Providers.VaultKeyProvider>();
+        keyProvider.ShouldNotBeNull();
+        keyProvider.ShouldBeOfType<Providers.VaultKeyProvider>();
     }
 
     [Test]
@@ -133,8 +133,8 @@ public class HashiCorpTests
         var encryptionService = _scope?.ServiceProvider.GetRequiredService<IEncryptionService>();
         
         // Assert
-        encryptionService.Should().NotBeNull();
-        encryptionService.Should().BeOfType<ColumnEncryptor.Services.AesGcmEncryptionService>();
+        encryptionService.ShouldNotBeNull();
+        encryptionService.ShouldBeOfType<Services.AesGcmEncryptionService>();
     }
 
     [Test]
@@ -142,7 +142,7 @@ public class HashiCorpTests
     {
         // Arrange
         var keyProvider = _scope?.ServiceProvider.GetRequiredService<IKeyProvider>();
-        keyProvider.Should().NotBeNull();
+        keyProvider.ShouldNotBeNull();
 
         var testKeyId = $"test-key-{Guid.NewGuid():N}";
         var keyBytes = System.Security.Cryptography.RandomNumberGenerator.GetBytes(32);
@@ -157,9 +157,9 @@ public class HashiCorpTests
         var retrievedKey = keyProvider.GetKey(testKeyId);
 
         // Assert
-        retrievedKey.Should().NotBeNull();
-        retrievedKey!.Id.Should().Be(testKeyId);
-        retrievedKey.KeyBytes.Should().BeEquivalentTo(keyBytes);
+        retrievedKey.ShouldNotBeNull();
+        retrievedKey!.Id.ShouldBe(testKeyId);
+        retrievedKey.KeyBytes.ShouldBeEquivalentTo(keyBytes);
     }
 
     [Test]
@@ -167,7 +167,7 @@ public class HashiCorpTests
     {
         // Arrange
         var keyProvider = _scope?.ServiceProvider.GetRequiredService<IKeyProvider>();
-        keyProvider.Should().NotBeNull();
+        keyProvider.ShouldNotBeNull();
 
         var primaryKeyId = $"primary-key-{Guid.NewGuid():N}";
         var keyBytes = System.Security.Cryptography.RandomNumberGenerator.GetBytes(32);
@@ -187,9 +187,9 @@ public class HashiCorpTests
         var retrievedPrimaryKey = keyProvider.GetPrimaryKey();
 
         // Assert
-        retrievedPrimaryKey.Should().NotBeNull();
-        retrievedPrimaryKey.Id.Should().Be(primaryKeyId);
-        retrievedPrimaryKey.KeyBytes.Should().BeEquivalentTo(keyBytes);
+        retrievedPrimaryKey.ShouldNotBeNull();
+        retrievedPrimaryKey.Id.ShouldBe(primaryKeyId);
+        retrievedPrimaryKey.KeyBytes.ShouldBeEquivalentTo(keyBytes);
     }
 
     [Test]
@@ -199,8 +199,8 @@ public class HashiCorpTests
         var encryptionService = _scope?.ServiceProvider.GetRequiredService<IEncryptionService>();
         var keyProvider = _scope?.ServiceProvider.GetRequiredService<IKeyProvider>();
         
-        encryptionService.Should().NotBeNull();
-        keyProvider.Should().NotBeNull();
+        encryptionService.ShouldNotBeNull();
+        keyProvider.ShouldNotBeNull();
 
         // Ensure we have a primary key
         var testKeyId = $"encryption-test-key-{Guid.NewGuid():N}";
@@ -219,11 +219,11 @@ public class HashiCorpTests
         var decryptedText = encryptionService.Decrypt(encryptedText);
 
         // Assert
-        encryptedText.Should().NotBeNullOrEmpty();
-        encryptedText.Should().NotBe(originalText);
-        encryptedText.Should().StartWith("{"); // Should be JSON
+        encryptedText.ShouldNotBeNullOrEmpty();
+        encryptedText.ShouldNotBe(originalText);
+        encryptedText.ShouldStartWith("{"); // Should be JSON
         
-        decryptedText.Should().Be(originalText);
+        decryptedText.ShouldBe(originalText);
     }
 
     [Test]
@@ -231,7 +231,7 @@ public class HashiCorpTests
     {
         // Arrange
         var keyProvider = _scope?.ServiceProvider.GetRequiredService<IKeyProvider>();
-        keyProvider.Should().NotBeNull();
+        keyProvider.ShouldNotBeNull();
 
         var key1Id = $"key1-{Guid.NewGuid():N}";
         var key2Id = $"key2-{Guid.NewGuid():N}";
@@ -263,12 +263,12 @@ public class HashiCorpTests
         var testKeys = allKeys.Where(k => k.Id == key1Id || k.Id == key2Id).ToList();
 
         // Assert
-        primaryKey1.Id.Should().Be(key1Id);
-        primaryKey2.Id.Should().Be(key2Id);
+        primaryKey1.Id.ShouldBe(key1Id);
+        primaryKey2.Id.ShouldBe(key2Id);
         
-        testKeys.Should().HaveCount(2);
-        testKeys.Should().Contain(k => k.Id == key1Id);
-        testKeys.Should().Contain(k => k.Id == key2Id);
+        testKeys.Count.ShouldBe(2);
+        testKeys.ShouldContain(k => k.Id == key1Id);
+        testKeys.ShouldContain(k => k.Id == key2Id);
     }
 
     [Test]
@@ -278,8 +278,8 @@ public class HashiCorpTests
         var encryptionService = _scope?.ServiceProvider.GetRequiredService<IEncryptionService>();
         var keyProvider = _scope?.ServiceProvider.GetRequiredService<IKeyProvider>();
         
-        encryptionService.Should().NotBeNull();
-        keyProvider.Should().NotBeNull();
+        encryptionService.ShouldNotBeNull();
+        keyProvider.ShouldNotBeNull();
 
         // Create two keys
         var oldKeyId = $"old-key-{Guid.NewGuid():N}";
@@ -309,6 +309,6 @@ public class HashiCorpTests
         var decryptedText = encryptionService.Decrypt(encryptedWithOldKey);
 
         // Assert
-        decryptedText.Should().Be(originalText);
+        decryptedText.ShouldBe(originalText);
     }
 }

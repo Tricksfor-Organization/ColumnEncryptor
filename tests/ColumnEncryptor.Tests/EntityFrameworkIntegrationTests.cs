@@ -6,7 +6,7 @@ using ColumnEncryptor.Common;
 using ColumnEncryptor.Interfaces;
 using ColumnEncryptor.Attributes;
 using ColumnEncryptor.Extensions;
-using FluentAssertions;
+using Shouldly;
 using NUnit.Framework;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
@@ -179,7 +179,7 @@ public class EntityFrameworkIntegrationTests
     {
         // Arrange
         var dbContext = _scope?.ServiceProvider.GetRequiredService<TestDbContext>();
-        dbContext.Should().NotBeNull();
+        dbContext.ShouldNotBeNull();
 
         var user = new User
         {
@@ -200,25 +200,22 @@ public class EntityFrameworkIntegrationTests
         // Assert - Verify data was saved
         var savedUser = await dbContext.Users.FirstOrDefaultAsync(u => u.Username == "john.doe");
         dbContext.DecryptLoadedEntities(); // Decrypt the loaded entities
-        savedUser.Should().NotBeNull();
-        savedUser!.Email.Should().Be("john.doe@example.com");
-        savedUser.CreditCardNumber.Should().Be("1234-5678-9012-3456");
-        savedUser.SocialSecurityNumber.Should().Be("123-45-6789");
-        savedUser.Salary.Should().Be(75000.50m);
-        savedUser.Notes.Should().Be("This is a confidential note about the user.");
-
+            savedUser.ShouldNotBeNull();
+        savedUser!.Email.ShouldBe("john.doe@example.com");
+        savedUser.CreditCardNumber.ShouldBe("1234-5678-9012-3456");
+        savedUser.SocialSecurityNumber.ShouldBe("123-45-6789");
+        savedUser.Salary.ShouldBe(75000.50m);
+        savedUser.Notes.ShouldBe("This is a confidential note about the user.");
         // Verify the data is actually encrypted in the database by checking raw values
         var rawData = await GetRawDatabaseValues(dbContext, savedUser.Id);
-        rawData.Should().NotBeNull();
+            rawData.ShouldNotBeNull();
         
         // Encrypted fields should not match plaintext values
-        rawData!.CreditCardNumber.Should().NotBe("1234-5678-9012-3456");
-        rawData.SocialSecurityNumber.Should().NotBe("123-45-6789");
-        rawData.Notes.Should().NotBe("This is a confidential note about the user.");
+            rawData!.CreditCardNumber.ShouldNotBe("1234-5678-9012-3456");
         
         // Non-encrypted fields should match plaintext values
-        rawData.Username.Should().Be("john.doe");
-        rawData.Email.Should().Be("john.doe@example.com");
+        rawData.Username.ShouldBe("john.doe");
+        rawData.Email.ShouldBe("john.doe@example.com");
     }
 
     [Test]
@@ -226,7 +223,7 @@ public class EntityFrameworkIntegrationTests
     {
         // Arrange
         var dbContext = _scope?.ServiceProvider.GetRequiredService<TestDbContext>();
-        dbContext.Should().NotBeNull();
+            dbContext.ShouldNotBeNull();
 
         var users = new[]
         {
@@ -260,17 +257,17 @@ public class EntityFrameworkIntegrationTests
             .ToListAsync();
         dbContext.DecryptLoadedEntities(); // Decrypt the loaded entities
 
-        allUsers.Should().HaveCount(2);
+            allUsers.Count.ShouldBe(2);
 
         var alice = allUsers.First(u => u.Username == "alice");
-        alice.CreditCardNumber.Should().Be("4111-1111-1111-1111");
-        alice.SocialSecurityNumber.Should().Be("111-22-3333");
-        alice.Notes.Should().Be("Alice's confidential data");
+            alice.CreditCardNumber.ShouldBe("4111-1111-1111-1111");
+            alice.SocialSecurityNumber.ShouldBe("111-22-3333");
+            alice.Notes.ShouldBe("Alice's confidential data");
 
         var bob = allUsers.First(u => u.Username == "bob");
-        bob.CreditCardNumber.Should().Be("5555-5555-5555-4444");
-        bob.SocialSecurityNumber.Should().Be("999-88-7777");
-        bob.Notes.Should().Be("Bob's private information");
+            bob.CreditCardNumber.ShouldBe("5555-5555-5555-4444");
+            bob.SocialSecurityNumber.ShouldBe("999-88-7777");
+            bob.Notes.ShouldBe("Bob's private information");
     }
 
     [Test]
@@ -278,7 +275,7 @@ public class EntityFrameworkIntegrationTests
     {
         // Arrange
         var dbContext = _scope?.ServiceProvider.GetRequiredService<TestDbContext>();
-        dbContext.Should().NotBeNull();
+            dbContext.ShouldNotBeNull();
 
         var user = new User
         {
@@ -304,10 +301,10 @@ public class EntityFrameworkIntegrationTests
         // Assert
         var updatedUser = await dbContext.Users.FirstAsync(u => u.Username == "updatetest");
         dbContext.DecryptLoadedEntities(); // Decrypt the loaded entities
-        updatedUser.CreditCardNumber.Should().Be("9999-8888-7777-6666");
-        updatedUser.SocialSecurityNumber.Should().Be("111-11-1111");
-        updatedUser.Notes.Should().Be("Updated confidential note");
-        updatedUser.Salary.Should().Be(60000.00m);
+            updatedUser.CreditCardNumber.ShouldBe("9999-8888-7777-6666");
+            updatedUser.SocialSecurityNumber.ShouldBe("111-11-1111");
+            updatedUser.Notes.ShouldBe("Updated confidential note");
+            updatedUser.Salary.ShouldBe(60000.00m);
     }
 
     [Test]
@@ -315,7 +312,7 @@ public class EntityFrameworkIntegrationTests
     {
         // Arrange
         var dbContext = _scope?.ServiceProvider.GetRequiredService<TestDbContext>();
-        dbContext.Should().NotBeNull();
+            dbContext.ShouldNotBeNull();
 
         var user = new User
         {
@@ -334,10 +331,10 @@ public class EntityFrameworkIntegrationTests
         // Assert
         var savedUser = await dbContext.Users.FirstAsync(u => u.Username == "nulltest");
         dbContext.DecryptLoadedEntities(); // Decrypt the loaded entities
-        savedUser.CreditCardNumber.Should().BeNull();
-        savedUser.SocialSecurityNumber.Should().Be("123-45-6789");
-        savedUser.Notes.Should().BeNull();
-        savedUser.Salary.Should().Be(45000.00m);
+            savedUser.CreditCardNumber.ShouldBeNull();
+        savedUser.SocialSecurityNumber.ShouldBe("123-45-6789");
+        savedUser.Notes.ShouldBeNull();
+        savedUser.Salary.ShouldBe(45000.00m);
     }
 
     [Test]
@@ -345,7 +342,7 @@ public class EntityFrameworkIntegrationTests
     {
         // Arrange
         var dbContext = _scope?.ServiceProvider.GetRequiredService<TestDbContext>();
-        dbContext.Should().NotBeNull();
+            dbContext.ShouldNotBeNull();
 
         var product = new Product
         {
@@ -366,11 +363,11 @@ public class EntityFrameworkIntegrationTests
         // Assert
         var savedProduct = await dbContext.Products.FirstAsync(p => p.Name == "Test Product");
         dbContext.DecryptLoadedEntities(); // Decrypt the loaded entities
-        savedProduct.Description.Should().Be("Public product description");
-        savedProduct.InternalNotes.Should().Be("Confidential internal notes about pricing strategy");
-        savedProduct.Cost.Should().Be(89.50m);
-        savedProduct.SupplierInfo.Should().Be("Confidential supplier details and contracts");
-        savedProduct.Price.Should().Be(199.99m);
+            savedProduct.Description.ShouldBe("Public product description");
+            savedProduct.InternalNotes.ShouldBe("Confidential internal notes about pricing strategy");
+            savedProduct.Cost.ShouldBe(89.50m);
+            savedProduct.SupplierInfo.ShouldBe("Confidential supplier details and contracts");
+            savedProduct.Price.ShouldBe(199.99m);
     }
 
     [Test]
@@ -378,7 +375,7 @@ public class EntityFrameworkIntegrationTests
     {
         // Arrange
         var dbContext = _scope?.ServiceProvider.GetRequiredService<TestDbContext>();
-        dbContext.Should().NotBeNull();
+            dbContext.ShouldNotBeNull();
 
         var users = Enumerable.Range(1, 10).Select(i => new User
         {
@@ -401,17 +398,17 @@ public class EntityFrameworkIntegrationTests
             .ToListAsync();
         dbContext.DecryptLoadedEntities(); // Decrypt the loaded entities
 
-        savedUsers.Should().HaveCount(10);
+            savedUsers.Count.ShouldBe(10);
 
         // Check each user (note: they might not be in the exact order 1,2,3... due to database insertion)
         foreach (var user in savedUsers)
         {
             // Extract the user number from the username
             var userNumber = int.Parse(user.Username.Split('_')[2]);
-            user.Username.Should().Be($"bulk_user_{userNumber}");
-            user.CreditCardNumber.Should().Be($"1234-5678-9012-{userNumber:D4}");
-            user.SocialSecurityNumber.Should().Be($"{userNumber:D3}-45-6789");
-            user.Notes.Should().Be($"Bulk user {userNumber} confidential notes");
+            user.Username.ShouldBe($"bulk_user_{userNumber}");
+            user.CreditCardNumber.ShouldBe($"1234-5678-9012-{userNumber:D4}");
+            user.SocialSecurityNumber.ShouldBe($"{userNumber:D3}-45-6789");
+            user.Notes.ShouldBe($"Bulk user {userNumber} confidential notes");
         }
     }
 

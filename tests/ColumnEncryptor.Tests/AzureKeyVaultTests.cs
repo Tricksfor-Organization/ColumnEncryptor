@@ -4,7 +4,7 @@ using ColumnEncryptor.Common;
 using ColumnEncryptor.Interfaces;
 using ColumnEncryptor.Providers;
 using ColumnEncryptor.Services;
-using FluentAssertions;
+using Shouldly;
 using NSubstitute;
 using NUnit.Framework;
 
@@ -57,8 +57,8 @@ public class AzureKeyVaultTests
         var keyProvider = _scope?.ServiceProvider.GetRequiredService<IKeyProvider>();
         
         // Assert
-        keyProvider.Should().NotBeNull();
-        keyProvider.Should().BeOfType<AzureKeyVaultProvider>();
+        keyProvider.ShouldNotBeNull();
+        keyProvider.ShouldBeOfType<AzureKeyVaultProvider>();
     }
 
     [Test]
@@ -68,8 +68,8 @@ public class AzureKeyVaultTests
         var encryptionService = _scope?.ServiceProvider.GetRequiredService<IEncryptionService>();
         
         // Assert
-        encryptionService.Should().NotBeNull();
-        encryptionService.Should().BeOfType<AesGcmEncryptionService>();
+        encryptionService.ShouldNotBeNull();
+        encryptionService.ShouldBeOfType<AesGcmEncryptionService>();
     }
 
     [Test]
@@ -78,15 +78,12 @@ public class AzureKeyVaultTests
         // Arrange
         var keyProvider = _scope?.ServiceProvider.GetRequiredService<IKeyProvider>();
         var vaultClient = _scope?.ServiceProvider.GetRequiredService<IVaultClient>();
-        keyProvider.Should().NotBeNull();
-        vaultClient.Should().NotBeNull();
+        keyProvider.ShouldNotBeNull();
+        vaultClient.ShouldNotBeNull();
 
         var testKeyId = $"{TestSecretPrefix}test-key-{Guid.NewGuid():N}";
         var keyBytes = System.Security.Cryptography.RandomNumberGenerator.GetBytes(32);
         var testKey = new EncryptionKey(testKeyId, keyBytes, DateTime.UtcNow);
-
-        // Setup mock vault client responses
-        var keyPath = $"column-encryption-keys/{testKeyId}";
 
         // Mock the vault client methods
         vaultClient!.WriteSecretAsync(Arg.Any<string>(), Arg.Any<object>()).Returns(Task.CompletedTask);
@@ -112,8 +109,8 @@ public class AzureKeyVaultTests
         // Arrange
         var keyProvider = _scope?.ServiceProvider.GetRequiredService<IKeyProvider>();
         var vaultClient = _scope?.ServiceProvider.GetRequiredService<IVaultClient>();
-        keyProvider.Should().NotBeNull();
-        vaultClient.Should().NotBeNull();
+        keyProvider.ShouldNotBeNull();
+        vaultClient.ShouldNotBeNull();
 
         var primaryKeyId = $"{TestSecretPrefix}primary-key-{Guid.NewGuid():N}";
         var keyBytes = System.Security.Cryptography.RandomNumberGenerator.GetBytes(32);
@@ -140,9 +137,9 @@ public class AzureKeyVaultTests
         var keyProvider = _scope?.ServiceProvider.GetRequiredService<IKeyProvider>();
         var vaultClient = _scope?.ServiceProvider.GetRequiredService<IVaultClient>();
         
-        encryptionService.Should().NotBeNull();
-        keyProvider.Should().NotBeNull();
-        vaultClient.Should().NotBeNull();
+        encryptionService.ShouldNotBeNull();
+        keyProvider.ShouldNotBeNull();
+        vaultClient.ShouldNotBeNull();
 
         // Setup mock vault client
         vaultClient!.WriteSecretAsync(Arg.Any<string>(), Arg.Any<object>()).Returns(Task.CompletedTask);
@@ -154,8 +151,8 @@ public class AzureKeyVaultTests
         // For full end-to-end testing, integration tests with a real Azure Key Vault would be more appropriate.
 
         // Act & Assert - Just verify services are properly initialized
-        encryptionService.Should().BeOfType<AesGcmEncryptionService>();
-        keyProvider.Should().BeOfType<AzureKeyVaultProvider>();
+        encryptionService.ShouldBeOfType<AesGcmEncryptionService>();
+        keyProvider.ShouldBeOfType<AzureKeyVaultProvider>();
     }
 
     [Test]
@@ -164,8 +161,8 @@ public class AzureKeyVaultTests
         // Arrange
         var keyProvider = _scope?.ServiceProvider.GetRequiredService<IKeyProvider>();
         var vaultClient = _scope?.ServiceProvider.GetRequiredService<IVaultClient>();
-        keyProvider.Should().NotBeNull();
-        vaultClient.Should().NotBeNull();
+        keyProvider.ShouldNotBeNull();
+        vaultClient.ShouldNotBeNull();
 
         var key1Id = $"{TestSecretPrefix}key1-{Guid.NewGuid():N}";
         var key2Id = $"{TestSecretPrefix}key2-{Guid.NewGuid():N}";
@@ -198,9 +195,9 @@ public class AzureKeyVaultTests
         var keyProvider = _scope?.ServiceProvider.GetRequiredService<IKeyProvider>();
         var vaultClient = _scope?.ServiceProvider.GetRequiredService<IVaultClient>();
         
-        encryptionService.Should().NotBeNull();
-        keyProvider.Should().NotBeNull();
-        vaultClient.Should().NotBeNull();
+        encryptionService.ShouldNotBeNull();
+        keyProvider.ShouldNotBeNull();
+        vaultClient.ShouldNotBeNull();
 
         // Setup mock vault client
         vaultClient!.WriteSecretAsync(Arg.Any<string>(), Arg.Any<object>()).Returns(Task.CompletedTask);
@@ -232,8 +229,8 @@ public class AzureKeyVaultTests
         // Arrange
         var keyProvider = _scope?.ServiceProvider.GetRequiredService<IKeyProvider>();
         var vaultClient = _scope?.ServiceProvider.GetRequiredService<IVaultClient>();
-        keyProvider.Should().NotBeNull();
-        vaultClient.Should().NotBeNull();
+        keyProvider.ShouldNotBeNull();
+        vaultClient.ShouldNotBeNull();
 
         // Setup mock vault client to return null for non-existent secrets
         vaultClient!.ReadSecretAsync<object>(Arg.Any<string>()).Returns((object?)null);
@@ -243,7 +240,7 @@ public class AzureKeyVaultTests
 
         // Act & Assert - Since the cache is empty and vault returns null, should return null
         var retrievedKey = keyProvider!.GetKey(nonExistentKeyId);
-        retrievedKey.Should().BeNull();
+        retrievedKey.ShouldBeNull();
     }
 
 }
