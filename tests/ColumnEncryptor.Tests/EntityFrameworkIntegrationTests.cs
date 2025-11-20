@@ -121,14 +121,7 @@ public class EntityFrameworkIntegrationTests
 
     [OneTimeTearDown]
     public async Task OneTimeTearDown()
-    {
-        if (_scope != null)
-        {
-            var dbContext = _scope.ServiceProvider.GetRequiredService<TestDbContext>();
-            await dbContext.Database.EnsureDeletedAsync();
-            _scope.Dispose();
-        }
-        
+    {        
         if (_vaultContainer is not null)
         {
             await _vaultContainer.StopAsync();
