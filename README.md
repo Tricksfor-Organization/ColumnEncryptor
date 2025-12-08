@@ -120,6 +120,57 @@ services.AddColumnEncryption(options =>
 });
 ```
 
+## Advanced Configuration
+
+### Using IServiceProvider for Dynamic Configuration
+
+You can access the service provider during configuration to fetch settings from other services:
+
+```csharp
+// Example 1: Using IOptions to fetch configuration
+services.AddColumnEncryption((options, sp) =>
+{
+    var appOptions = sp.GetRequiredService<IOptionsSnapshot<ApplicationOptions>>().Value;
+    
+    options.KeyProvider = KeyProviderType.HashiCorpVault;
+    options.Vault = new VaultOptions
+    {
+        ServerUrl = appOptions.VaultConnectionString,
+        AuthMethod = VaultAuthMethod.AppRole,
+        RoleId = appOptions.VaultRoleId,
+        SecretId = appOptions.VaultSecretId,
+        KeysPath = "secret/encryption-keys"
+    };
+});
+
+// Example 2: Environment-based configuration
+services.AddColumnEncryption((options, sp) =>
+{
+    var environment = sp.GetRequiredService<IHostEnvironment>();
+    
+    if (environment.IsProduction())
+    {
+        options.KeyProvider = KeyProviderType.AzureKeyVault;
+        options.AzureKeyVault = new AzureKeyVaultOptions
+        {
+            VaultUrl = "https://prod-vault.vault.azure.net/",
+            AuthMethod = AzureAuthMethod.ManagedIdentity
+        };
+    }
+    else
+    {
+        options.KeyProvider = KeyProviderType.HashiCorpVault;
+        options.Vault = new VaultOptions
+        {
+            ServerUrl = "http://localhost:8200",
+            AuthMethod = VaultAuthMethod.Token,
+            Token = "dev-token",
+            KeysPath = "secret/encryption-keys"
+        };
+    }
+});
+```
+
 ## Configuration via appsettings.json
 
 ```json
