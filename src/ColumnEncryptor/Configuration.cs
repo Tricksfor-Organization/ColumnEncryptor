@@ -71,6 +71,8 @@ public static class ColumnEncryptorConfiguration
         this IServiceCollection services,
         Action<EncryptionOptions, IServiceProvider> configure)
     {
+        ArgumentNullException.ThrowIfNull(configure);
+
         // Register a placeholder that will be replaced after building the service provider
         services.AddSingleton<EncryptionOptions>(sp =>
         {
