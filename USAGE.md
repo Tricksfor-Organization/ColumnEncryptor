@@ -1,10 +1,74 @@
 # Column Encryptor Usage Guide
 
-This guide shows how to configure and use the Column Encryptor library with Azure Key Vault and HashiCorp Vault key management.
+This guide shows how to configure and use the Column Encryptor library with Azure Key Vault, HashiCorp Vault, and Manual key management.
 
 ## Configuration
 
-### 1. Azure Key Vault Provider (Recommended)
+### 1. Manual Provider (Development & Testing)
+
+The Manual provider allows you to configure encryption keys directly in your application settings, suitable for development, testing, or scenarios where you have existing secure configuration management.
+
+#### Basic Configuration
+
+```csharp
+// Program.cs or Startup.cs
+services.AddColumnEncryption(options =>
+{
+    options.KeyProvider = KeyProviderType.Manual;
+    options.Manual = new ManualKeyProviderOptions
+    {
+        PrimaryKeyId = "key-1",
+        Keys = new List<ManualEncryptionKey>
+        {
+            new ManualEncryptionKey 
+            { 
+                Id = "key-1", 
+                KeyBase64 = "YOUR-BASE64-ENCODED-32-BYTE-KEY-HERE"
+            }
+        }
+    };
+});
+```
+
+#### Configuration from appsettings.json
+
+```json
+{
+  "ColumnEncryption": {
+    "KeyProvider": "Manual",
+    "Manual": {
+      "PrimaryKeyId": "key-1",
+      "Keys": [
+        {
+          "Id": "key-1",
+          "KeyBase64": "YWJjZGVmZ2hpamtsbW5vcHFyc3R1dnd4eXoxMjM0NTY=",
+          "CreatedUtc": "2024-01-01T00:00:00Z"
+        }
+      ]
+    }
+  }
+}
+```
+
+```csharp
+var encryptionOptions = new EncryptionOptions();
+configuration.GetSection("ColumnEncryption").Bind(encryptionOptions);
+services.AddColumnEncryptor(encryptionOptions);
+```
+
+#### Generating Secure Keys
+
+```bash
+# Linux/macOS
+openssl rand -base64 32
+
+# PowerShell
+[Convert]::ToBase64String((New-Object byte[] 32 | ForEach-Object { [System.Security.Cryptography.RandomNumberGenerator]::Fill($_); $_ }))
+```
+
+**⚠️ Security Warning**: Never commit encryption keys to source control. Use environment variables, Azure App Configuration, or secure secret management for production.
+
+### 2. Azure Key Vault Provider (Recommended for Production)
 
 #### Basic Configuration with DefaultAzureCredential
 
@@ -61,7 +125,7 @@ services.AddColumnEncryption(options =>
 });
 ```
 
-### 2. HashiCorp Vault Provider
+### 3. HashiCorp Vault Provider
 
 ```csharp
 services.AddColumnEncryption(options =>
