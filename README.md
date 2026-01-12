@@ -120,6 +120,45 @@ services.AddColumnEncryption(options =>
 });
 ```
 
+### Manual Provider (Configuration-Based)
+
+For development, testing, or scenarios where you want to manage keys manually without external vault infrastructure:
+
+```csharp
+services.AddColumnEncryption(options =>
+{
+    options.KeyProvider = KeyProviderType.Manual;
+    options.Manual = new ManualKeyProviderOptions
+    {
+        PrimaryKeyId = "key-1",
+        Keys = new List<ManualEncryptionKey>
+        {
+            new ManualEncryptionKey 
+            { 
+                Id = "key-1", 
+                KeyBase64 = "YWJjZGVmZ2hpamtsbW5vcHFyc3R1dnd4eXoxMjM0NTY=" // 32-byte key in Base64
+            }
+        }
+    };
+});
+```
+
+**⚠️ Security Warning**: The Manual provider stores encryption keys directly in your application configuration. This is suitable for:
+- Development and testing environments
+- Non-production scenarios
+- Applications with existing secure configuration management
+
+**Never commit encryption keys to source control.** Use environment variables, Azure App Configuration, or secure secret management for production.
+
+**Generate secure keys:**
+```bash
+# Linux/macOS
+openssl rand -base64 32
+
+# PowerShell
+[Convert]::ToBase64String((New-Object byte[] 32 | ForEach-Object { [System.Security.Cryptography.RandomNumberGenerator]::Fill($_); $_ }))
+```
+
 ## Advanced Configuration
 
 ### Using IServiceProvider for Dynamic Configuration
@@ -173,6 +212,8 @@ services.AddColumnEncryption((options, sp) =>
 
 ## Configuration via appsettings.json
 
+### Azure Key Vault
+
 ```json
 {
   "ColumnEncryption": {
@@ -187,15 +228,49 @@ services.AddColumnEncryption((options, sp) =>
 }
 ```
 
+### Manual Provider
+
+```json
+{
+  "ColumnEncryption": {
+    "KeyProvider": "Manual",
+    "Manual": {
+      "PrimaryKeyId": "key-1",
+      "Keys": [
+        {
+          "Id": "key-1",
+          "KeyBase64": "YOUR-BASE64-ENCODED-32-BYTE-KEY-HERE",
+          "CreatedUtc": "2024-01-01T00:00:00Z"
+        }
+      ]
+    }
+  }
+}
+```
+
+Then bind the configuration:
+
 ```csharp
-services.AddColumnEncryption(configuration.GetSection("ColumnEncryption"));
+var encryptionOptions = new EncryptionOptions();
+configuration.GetSection("ColumnEncryption").Bind(encryptionOptions);
+services.AddColumnEncryptor(encryptionOptions);
+```
+
+Or use the service provider overload:
+
+```csharp
+services.AddColumnEncryption((options, sp) =>
+{
+    var configuration = sp.GetRequiredService<IConfiguration>();
+    configuration.GetSection("ColumnEncryption").Bind(options);
+});
 ```
 
 ## Security Features
 
 - **Key Rotation**: Change encryption keys without re-encrypting existing data
 - **Key Versioning**: Each encrypted value includes key metadata for seamless decryption
-- **Secure Storage**: Keys stored in Azure Key Vault or HashiCorp Vault
+- **Secure Storage**: Keys stored in Azure Key Vault, HashiCorp Vault, or managed manually
 - **Authentication**: Multiple authentication methods (Managed Identity, Service Principal, DefaultAzureCredential, etc.)
 - **Audit Logging**: Comprehensive logging for security monitoring
 
