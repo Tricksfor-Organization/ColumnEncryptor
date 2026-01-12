@@ -39,6 +39,9 @@ public static class ColumnEncryptorConfiguration
             case KeyProviderType.AzureKeyVault:
                 AddAzureKeyVaultKeyProvider(services, options);
                 break;
+            case KeyProviderType.Manual:
+                AddManualKeyProvider(services, options);
+                break;
             default:
                 throw new NotSupportedException($"Key provider type {options.KeyProvider} is not supported");
         }
@@ -97,6 +100,7 @@ public static class ColumnEncryptorConfiguration
             {
                 KeyProviderType.HashiCorpVault => CreateHashiCorpVaultKeyProvider(provider, options),
                 KeyProviderType.AzureKeyVault => CreateAzureKeyVaultKeyProvider(provider, options),
+                KeyProviderType.Manual => CreateManualKeyProvider(provider, options),
                 _ => throw new NotSupportedException($"Key provider type {options.KeyProvider} is not supported")
             };
         });
@@ -252,5 +256,41 @@ public static class ColumnEncryptorConfiguration
         
         // Create and return key provider
         return new AzureKeyVaultProvider(vaultClient, azureOptions, provider.GetRequiredService<ILogger<AzureKeyVaultProvider>>());
+    }
+
+    private static void AddManualKeyProvider(IServiceCollection services, EncryptionOptions options)
+    {
+        if (options.Manual == null)
+        {
+            throw new InvalidOperationException("ManualKeyProviderOptions must be configured when using Manual key provider");
+        }
+
+        // Configure Manual key provider options
+        services.Configure<ManualKeyProviderOptions>(manualOptions =>
+        {
+            manualOptions.PrimaryKeyId = options.Manual.PrimaryKeyId;
+            manualOptions.Keys = options.Manual.Keys;
+        });
+
+        // Register Manual key provider
+        services.AddSingleton<IKeyProvider, ManualKeyProvider>();
+    }
+
+    private static IKeyProvider CreateManualKeyProvider(IServiceProvider provider, EncryptionOptions options)
+    {
+        if (options.Manual == null)
+        {
+            throw new InvalidOperationException("ManualKeyProviderOptions must be configured when using Manual key provider");
+        }
+
+        // Create ManualKeyProviderOptions
+        var manualOptions = Options.Create(new ManualKeyProviderOptions
+        {
+            PrimaryKeyId = options.Manual.PrimaryKeyId,
+            Keys = options.Manual.Keys
+        });
+
+        // Create and return key provider
+        return new ManualKeyProvider(manualOptions, provider.GetRequiredService<ILogger<ManualKeyProvider>>());
     }
 }

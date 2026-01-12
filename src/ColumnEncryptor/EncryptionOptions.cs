@@ -21,6 +21,11 @@ public class EncryptionOptions
     /// Azure Key Vault configuration (used when KeyProvider is AzureKeyVault)
     /// </summary>
     public AzureKeyVaultOptions? AzureKeyVault { get; set; }
+    
+    /// <summary>
+    /// Manual key provider configuration (used when KeyProvider is Manual)
+    /// </summary>
+    public ManualKeyProviderOptions? Manual { get; set; }
 }
 
 public class VaultOptions
@@ -107,7 +112,8 @@ public class AzureKeyVaultOptions
 public enum KeyProviderType
 {
     HashiCorpVault,
-    AzureKeyVault
+    AzureKeyVault,
+    Manual
 }
 
 public enum VaultAuthMethod
@@ -123,4 +129,35 @@ public enum AzureAuthMethod
     DefaultAzureCredential,
     ManagedIdentity,
     ServicePrincipal
+}
+
+public class ManualKeyProviderOptions
+{
+    /// <summary>
+    /// Primary key ID to use for encryption
+    /// </summary>
+    public string PrimaryKeyId { get; set; } = string.Empty;
+    
+    /// <summary>
+    /// Collection of encryption keys (Base64 encoded)
+    /// </summary>
+    public List<ManualEncryptionKey> Keys { get; set; } = new();
+}
+
+public class ManualEncryptionKey
+{
+    /// <summary>
+    /// Unique identifier for this key
+    /// </summary>
+    public string Id { get; set; } = string.Empty;
+    
+    /// <summary>
+    /// Base64-encoded 256-bit (32-byte) encryption key
+    /// </summary>
+    public string KeyBase64 { get; set; } = string.Empty;
+    
+    /// <summary>
+    /// When this key was created (optional)
+    /// </summary>
+    public DateTime? CreatedUtc { get; set; }
 }
