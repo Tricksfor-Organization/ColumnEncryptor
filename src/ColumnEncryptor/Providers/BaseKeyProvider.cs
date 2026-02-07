@@ -7,17 +7,18 @@ namespace ColumnEncryptor.Providers;
 /// <summary>
 /// Base class for key providers that use vault-based storage with local caching
 /// </summary>
-public abstract class BaseKeyProvider : IKeyProvider
+public abstract class BaseKeyProvider(IVaultClient vaultClient, ILogger logger, TimeSpan cacheExpiry) : IKeyProvider
 {
-    protected readonly IVaultClient _vaultClient;
-    protected readonly ILogger _logger;
+    protected readonly IVaultClient _vaultClient = vaultClient ?? throw new ArgumentNullException(nameof(vaultClient));
+    protected readonly ILogger _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     protected readonly object _lock = new();
     
     // Cache keys locally to avoid frequent vault calls
     protected readonly Dictionary<string, EncryptionKey> _keyCache = new();
     protected string? _primaryKeyId;
     protected DateTime _lastCacheRefresh = DateTime.MinValue;
-    protected readonly TimeSpan _cacheExpiry;
+    protected readonly TimeSpan _cacheExpiry = cacheExpiry;
+    private bool _isRefreshing = false;
 
     /// <summary>
     /// Gets the base path for storing encryption keys in the vault
@@ -28,15 +29,6 @@ public abstract class BaseKeyProvider : IKeyProvider
     /// Gets the provider name for logging purposes
     /// </summary>
     protected abstract string ProviderName { get; }
-
-    protected BaseKeyProvider(IVaultClient vaultClient, ILogger logger, TimeSpan cacheExpiry)
-    {
-        _vaultClient = vaultClient ?? throw new ArgumentNullException(nameof(vaultClient));
-        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
-        _cacheExpiry = cacheExpiry;
-        
-        // Don't call RefreshKeysFromVault here - let derived classes do it after their fields are initialized
-    }
 
     public EncryptionKey GetPrimaryKey()
     {
@@ -74,31 +66,39 @@ public abstract class BaseKeyProvider : IKeyProvider
     {
         if (key == null) throw new ArgumentNullException(nameof(key));
         
+        // Prepare data outside the lock
+        var keyData = new VaultKeyData
+        {
+            Id = key.Id,
+            KeyBase64 = Convert.ToBase64String(key.KeyBytes),
+            CreatedUtc = key.CreatedUtc
+        };
+
+        var keyPath = GetKeyPath(key.Id);
+        
+        // Perform vault write outside the lock to avoid blocking readers
+        _vaultClient.WriteSecretAsync(keyPath, keyData).GetAwaiter().GetResult();
+        
+        // Only lock for in-memory cache updates
+        bool shouldPromoteToPrimary;
         lock (_lock)
         {
-            // Store key in vault
-            var keyData = new VaultKeyData
-            {
-                Id = key.Id,
-                KeyBase64 = Convert.ToBase64String(key.KeyBytes),
-                CreatedUtc = key.CreatedUtc
-            };
-
-            var keyPath = GetKeyPath(key.Id);
-            _vaultClient.WriteSecretAsync(keyPath, keyData).GetAwaiter().GetResult();
-            
-            // Update cache
             _keyCache[key.Id] = key;
+            shouldPromoteToPrimary = string.IsNullOrEmpty(_primaryKeyId);
             
-            // If no primary key is set, make this the primary
-            if (string.IsNullOrEmpty(_primaryKeyId))
+            if (shouldPromoteToPrimary)
             {
                 _primaryKeyId = key.Id;
-                UpdatePrimaryKeyInVault();
             }
-            
-            _logger.LogInformation("Added encryption key {KeyId} to {Provider}", key.Id, ProviderName);
         }
+        
+        // Update primary key in vault outside the lock
+        if (shouldPromoteToPrimary)
+        {
+            UpdatePrimaryKeyInVault();
+        }
+        
+        _logger.LogInformation("Added encryption key {KeyId} to {Provider}", key.Id, ProviderName);
     }
 
     public void PromoteKey(string keyId)
@@ -107,6 +107,7 @@ public abstract class BaseKeyProvider : IKeyProvider
         
         EnsureKeysAreFresh();
         
+        // Validate key exists and update in-memory state under lock
         lock (_lock)
         {
             if (!_keyCache.ContainsKey(keyId))
@@ -115,17 +116,47 @@ public abstract class BaseKeyProvider : IKeyProvider
             }
             
             _primaryKeyId = keyId;
-            UpdatePrimaryKeyInVault();
-            
-            _logger.LogInformation("Promoted key {KeyId} to primary in {Provider}", keyId, ProviderName);
         }
+        
+        // Update vault outside the lock
+        UpdatePrimaryKeyInVault();
+        
+        _logger.LogInformation("Promoted key {KeyId} to primary in {Provider}", keyId, ProviderName);
     }
 
     protected void EnsureKeysAreFresh()
     {
-        if (DateTime.UtcNow - _lastCacheRefresh > _cacheExpiry)
+        // Fast path: if cache is fresh, return immediately without locking
+        if (DateTime.UtcNow - _lastCacheRefresh <= _cacheExpiry)
+            return;
+        
+        // Cache is potentially stale, use double-check locking to prevent redundant refreshes
+        bool shouldRefresh = false;
+        lock (_lock)
         {
-            RefreshKeysFromVault();
+            // Double-check after acquiring lock - another thread may have already refreshed
+            if (DateTime.UtcNow - _lastCacheRefresh > _cacheExpiry && !_isRefreshing)
+            {
+                _isRefreshing = true;
+                shouldRefresh = true;
+            }
+        }
+        
+        // Perform refresh outside lock if we won the race
+        if (shouldRefresh)
+        {
+            try
+            {
+                RefreshKeysFromVault();
+            }
+            finally
+            {
+                // Always clear the flag, even if refresh throws
+                lock (_lock)
+                {
+                    _isRefreshing = false;
+                }
+            }
         }
     }
 
@@ -133,37 +164,43 @@ public abstract class BaseKeyProvider : IKeyProvider
     {
         try
         {
+            // Perform all vault reads outside the lock
+            var primaryKeyPath = GetPrimaryKeyPath();
+            var primaryKeyData = _vaultClient.ReadSecretAsync<PrimaryKeyData>(primaryKeyPath).GetAwaiter().GetResult();
+            var newPrimaryKeyId = primaryKeyData?.KeyId;
+            
+            var keyPaths = _vaultClient.ListSecretsAsync(KeysBasePath).GetAwaiter().GetResult();
+            var loadedKeys = new Dictionary<string, EncryptionKey>();
+            
+            foreach (var keyPath in keyPaths.Where(p => p != "primary"))
+            {
+                var fullKeyPath = $"{KeysBasePath}/{keyPath}";
+                var keyData = _vaultClient.ReadSecretAsync<VaultKeyData>(fullKeyPath).GetAwaiter().GetResult();
+                
+                if (keyData != null)
+                {
+                    var key = new EncryptionKey(
+                        keyData.Id,
+                        Convert.FromBase64String(keyData.KeyBase64),
+                        keyData.CreatedUtc
+                    );
+                    loadedKeys[keyData.Id] = key;
+                }
+            }
+            
+            // Only lock to update in-memory cache
             lock (_lock)
             {
                 _keyCache.Clear();
-                
-                // Load primary key ID
-                var primaryKeyPath = GetPrimaryKeyPath();
-                var primaryKeyData = _vaultClient.ReadSecretAsync<PrimaryKeyData>(primaryKeyPath).GetAwaiter().GetResult();
-                _primaryKeyId = primaryKeyData?.KeyId;
-                
-                // Load all keys
-                var keyPaths = _vaultClient.ListSecretsAsync(KeysBasePath).GetAwaiter().GetResult();
-                
-                foreach (var keyPath in keyPaths.Where(p => p != "primary"))
+                foreach (var kvp in loadedKeys)
                 {
-                    var fullKeyPath = $"{KeysBasePath}/{keyPath}";
-                    var keyData = _vaultClient.ReadSecretAsync<VaultKeyData>(fullKeyPath).GetAwaiter().GetResult();
-                    
-                    if (keyData != null)
-                    {
-                        var key = new EncryptionKey(
-                            keyData.Id,
-                            Convert.FromBase64String(keyData.KeyBase64),
-                            keyData.CreatedUtc
-                        );
-                        _keyCache[keyData.Id] = key;
-                    }
+                    _keyCache[kvp.Key] = kvp.Value;
                 }
-                
+                _primaryKeyId = newPrimaryKeyId;
                 _lastCacheRefresh = DateTime.UtcNow;
-                _logger.LogDebug("Refreshed {Count} keys from {Provider}", _keyCache.Count, ProviderName);
             }
+            
+            _logger.LogDebug("Refreshed {Count} keys from {Provider}", loadedKeys.Count, ProviderName);
         }
         catch (Exception ex)
         {
