@@ -45,7 +45,7 @@ public class AesGcmEncryptionService(IKeyProvider keyProvider) : IEncryptionServ
         return Encoding.UTF8.GetString(plaintext);
     }
 
-    private class EncryptedPayload
+    private sealed class EncryptedPayload
     {
         public int Version { get; set; }
         public string KeyId { get; set; } = string.Empty;
