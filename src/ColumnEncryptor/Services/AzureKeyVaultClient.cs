@@ -32,9 +32,9 @@ public sealed class AzureKeyVaultClient : IVaultClient, IDisposable
         TokenCredential credential = azureOptions.AuthMethod switch
         {
             AzureAuthMethod.DefaultAzureCredential => new DefaultAzureCredential(),
-            AzureAuthMethod.ManagedIdentity => string.IsNullOrEmpty(azureOptions.ClientId)
+            AzureAuthMethod.ManagedIdentity => string.IsNullOrWhiteSpace(azureOptions.ClientId)
                 ? new ManagedIdentityCredential(ManagedIdentityId.SystemAssigned)
-                : new ManagedIdentityCredential(ManagedIdentityId.FromUserAssignedClientId(azureOptions.ClientId)),
+                : new ManagedIdentityCredential(ManagedIdentityId.FromUserAssignedClientId(azureOptions.ClientId.Trim())),
             AzureAuthMethod.ServicePrincipal => new ClientSecretCredential(
                 azureOptions.TenantId, 
                 azureOptions.ClientId, 
