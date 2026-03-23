@@ -23,8 +23,7 @@ public class HashiCorpTests
     public async Task OneTimeSetUp()
     {
         // Start HashiCorp Vault container
-        _vaultContainer = new ContainerBuilder()
-            .WithImage(VaultImage)
+        _vaultContainer = new ContainerBuilder(VaultImage)
             .WithCleanUp(true)
             .WithName($"vault-test-{Guid.NewGuid():N}")
             // Bind the container's Vault port to a random free host port to avoid collisions
