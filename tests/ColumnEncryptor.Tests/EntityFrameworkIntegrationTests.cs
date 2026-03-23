@@ -32,8 +32,7 @@ public class EntityFrameworkIntegrationTests
     public async Task OneTimeSetUp()
     {
         // Start HashiCorp Vault container
-        _vaultContainer = new ContainerBuilder()
-            .WithImage(VaultImage)
+        _vaultContainer = new ContainerBuilder(VaultImage)
             .WithCleanUp(true)
             .WithName($"vault-test-{Guid.NewGuid():N}")
             // Bind the container's Vault port to a random free host port to avoid collisions
@@ -57,7 +56,7 @@ public class EntityFrameworkIntegrationTests
         await WaitForVaultHealthy(_vaultUrl);
 
         // Start SQL Server container
-        _sqlContainer = new MsSqlBuilder()
+        _sqlContainer = new MsSqlBuilder("mcr.microsoft.com/mssql/server:2022-CU14-ubuntu-22.04")
             .WithPassword(SqlServerPassword)
             .WithCleanUp(true)
             .WithName($"sql-test-{Guid.NewGuid():N}")
